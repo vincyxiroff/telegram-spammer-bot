@@ -1,12 +1,13 @@
 from aiogram import Bot, Dispatcher, executor, types
 import logging
-import asyncio
+
+import nest_asyncio
+nest_asyncio.apply()
 
 import aiogram
-from requests import session
 from config import Config
 import db
-from send import Send
+import send
 
 logging.basicConfig(level=logging.INFO)
 config = Config()
@@ -83,12 +84,35 @@ async def show_message(message : types.Message):
 
 @dp.message_handler(commands=['send_all'])
 async def sendall(message : types.Message):
-    spam = Send(config.API_ID, config.API_HASH)
     groups = db.getall('links')
     text = db.getall('messages')
-    print(groups, text)
-    async with spam.client.session as sess:
-        await spam.start(groups, text[0])
+    if not text[0]:
+        await show_message(message)
+        return
+    if not groups:
+        await show_groups(message)
+        return
+
+    error_message = await send.start(groups, text[0])
+    if error_message:
+        await message.answer('Рассылка прошла с ошибками\n\n' + error_message)
+        return
+    await message.answer('Рассылка успешно проведена')
+
+
+@dp.message_handler(commands=['delete_groups'])
+async def delete_groups(message : types.Message):
+    links_to_delete = message.get_args()
+    try:
+        db.delete('links', links_to_delete)
+    except Exception as e:
+        await message.answer('Не удалось удалить группы\n' + f'Ошибка: {str(e)}')
+        return
+    await message.answer('Группы были удалены\n')
+    await show_groups(message)
+    
+
+
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)

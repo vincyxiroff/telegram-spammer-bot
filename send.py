@@ -1,32 +1,33 @@
 from telethon import TelegramClient
 import logging
+from config import Config
+from typing import Dict
+
+config = Config()
 
 logging.basicConfig(format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
                     level=logging.WARNING)
 
+client = TelegramClient('script', api_id=config.API_ID, api_hash=config.API_HASH)
 
+async def sendall(groups, message_text):
+    errors = {}
+    for group in groups:
+        try:
+            await client.send_message(group, message_text)
+        except Exception as e:
+            errors[f'{group}'] = str(e)
+    return errors
 
-class Send:
-    def __init__(self, api_id, api_hash) -> None:
-        self.api_id = api_id
-        self.api_hash = api_hash
-        self.client = TelegramClient('test', api_id, api_hash)
+async def create_error_message(errors : Dict):
+    answer_message = ''
+    for i, (error_group, error_message) in enumerate(errors.items()):
+        answer_message += f"Не удалось отправить сообщение в группу {error_group}\n"\
+                   f"Ошибка: {error_message}\n\n"
 
-    async def sendall(self, groups, message_text):
-        self.errors = {}
+    return answer_message
 
-        for group in groups:
-            try:
-                await self.client.send_message(group, message_text)
-            except Exception as e:
-                self.errors['group'] = e
-        
-        
-
-
-    async def start(self, groups, message_text):
-        with self.client:
-            self.client.loop.run_until_complete(
-                                        self.sendall(groups, message_text))
-
-
+async def start(groups, message_text):
+    async with client:
+        errors = client.loop.run_until_complete(sendall(groups, message_text))
+        return await create_error_message(errors)

@@ -3,3 +3,4 @@ __pycache__/config.cpython-38.pyc
 .env
 test.session
 db/script.db
+script.session
