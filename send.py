@@ -3,6 +3,7 @@ import logging
 from config import Config
 from typing import Dict
 
+
 config = Config()
 
 logging.basicConfig(format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
