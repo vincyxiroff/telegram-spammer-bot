@@ -1,9 +1,9 @@
-create table links(
+create table if NOT EXISTS links(
     id integer primary key,
     link text
 );
 
-create table messages(
-    id integer primary key
+create table if not EXISTS messages(
+    id integer primary key,
     message_text text
 );

@@ -1,5 +1,4 @@
-from msilib.sequence import tables
-from typing import Dict
+from typing import Dict, Tuple
 
 
 import os
@@ -11,18 +10,34 @@ conn = sqlite3.connect(os.path.join('db', 'script.db'))
 cursor = conn.cursor()
 
 
-def insert(table : str, values : Tuple):
+def insert(table : str, values : str):
+    
+    values = _parse_message(values)
+    #print(values)
     if table == 'links':
         column = 'link'
     else:
         column = 'message_text'
 
     placeholders = ', '.join('?' * len(values))
+    #print (placeholders)
     cursor.executemany(
-        f'INSERT INTO {table} {column}'
-        f'VALUES ({placeholders})', values)
+        f"INSERT INTO {table} ({column}) "
+        f"VALUES ({placeholders})", [values])
     conn.commit()
 
+def update(table : str, values : str):
+
+    values = _parse_message(values)
+    if table == 'links':
+        raise Exception
+    else:
+        column = 'message_text'
+
+    cursor.execute(
+        f"UPDATE {table} "
+        f"SET {column} = ? "
+        f"WHERE id=1", values)
 
 
 def getall(table : str) -> List[str]:
@@ -48,11 +63,19 @@ def _init_db():
 
 
 def check_db():
-    cursor.execute("SELECT name FROM sqlite_master "
-                    "WHERE type='table' AND (name='lnks' OR name='messages')")
-    tables = cursor.fetchall()
-    if len(tables) < 2:
-        _init_db()
+    _init_db()
+    # cursor.execute("SELECT name FROM sqlite_master "
+    #                 "WHERE type='table' AND name='messages'")
+    # tables = cursor.fetchall()
+    # print (tables)
+    # if len(tables):
+    #     _init_db()
+
+
+def _parse_message(message : str) -> Tuple:
+    parsed_msg = tuple(message.split('\n'))
+    print(parsed_msg)
+    return parsed_msg
 
 
 check_db()
