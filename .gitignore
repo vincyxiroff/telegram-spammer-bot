@@ -2,5 +2,6 @@ __pycache__
 __pycache__/config.cpython-38.pyc
 
 db/script.db
-
+script.session
+script.session-journal
 techtask
