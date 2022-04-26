@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Tuple, List
 
 
 import os
@@ -12,18 +12,15 @@ cursor = conn.cursor()
 
 def insert(table : str, values : str):
     
-    #print(values)
+    """Inserts specified values into specified table"""
+
     if table == 'links':
         column = 'link'
         values = _parse_links(values)
     else:
         column = 'message_text'
 
-    placeholders = ', '.join('?' * len(values))
-    #print (placeholders)
-
     for value in values:
-        print(f"INSERT INTO {table} ({column}) VALUES (?)", (value,))
         cursor.execute(f"INSERT INTO {table} ({column}) VALUES (?)", (value,))
 
     conn.commit()
@@ -31,11 +28,12 @@ def insert(table : str, values : str):
 
 def update(table : str, values : str):
 
-    if table == 'links':
-        column = 'link'
-        values = _parse_links(values)
-    else:
+    """Updates specified values in specified table
+    !At the momend is used for message!"""
+    if table == 'messages':
         column = 'message_text'
+    else:
+        raise KeyError(f"Update function does not support operations with '{table}' table")
 
     cursor.execute(
         f"UPDATE {table} "
@@ -43,21 +41,30 @@ def update(table : str, values : str):
         f"WHERE id=1", (values,))
     conn.commit()
 
+
 def getall(table : str) -> List[str]:
+
+    """Extension onto fetchall
+    Selects everything from specified table and puts in to a list"""
+
     cursor.execute(f'SELECT * from {table}')
     rows = cursor.fetchall()
     result = []
     for row in rows:
         result.append(row[1])
+    if table == 'links':
+        result = _delete_empties(result)
     return result
 
 
 def delete(table : str, values : str):
+
+    """Deletes specified values from specified table"""
+
     if table == 'links':
         values = _parse_links(values)
         column = 'link'
         for value in values:
-            print((value,))
             cursor.execute(f"DELETE FROM {table} where ({column}) = (?)", (value,))
     else:
         column = 'message_text'
@@ -65,6 +72,9 @@ def delete(table : str, values : str):
     conn.commit()
 
 def _init_db():
+
+    """Initialize database by executing 'createdb' script"""
+
     with open('createdb.sql', 'r') as f:
         sql = f.read()
     cursor.executescript(sql)
@@ -73,18 +83,27 @@ def _init_db():
 
 def check_db():
     _init_db()
-    # cursor.execute("SELECT name FROM sqlite_master "
-    #                 "WHERE type='table' AND name='messages'")
-    # tables = cursor.fetchall()
-    # print (tables)
-    # if len(tables):
-    #     _init_db()
 
 
 def _parse_links(message : str) -> Tuple:
+
+    """Splits string by '\n' to a tuple"""
+
     parsed_msg = tuple(message.split('\n'))
-    print(parsed_msg)
     return parsed_msg
 
+
+def _delete_empties(list_to_clear : List) -> List:
+
+    """Paramters: links -> List
+       
+       Deletes duplicates and removes empty elements"""
+
+    cleared_list = set(list_to_clear)
+    try:
+        cleared_list.remove('')
+    except KeyError as e:
+        pass
+    return list(cleared_list)
 
 check_db()
