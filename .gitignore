@@ -1,6 +1,5 @@
 __pycache__
 __pycache__/config.cpython-38.pyc
-.env
 db/script.db
 script.session
 script.session-journal
