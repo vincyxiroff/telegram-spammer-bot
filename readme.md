@@ -31,9 +31,11 @@
 
   *Instructions and examples for use:*
 
-  Type /start to your bot to start bot and you will get all available commands.
-  Set the spam-list groups and spam message with /add_groups and /set_message commands respectively. 
-  Use /send_all to start sending. *!WARNING!* At the first time it will ask for a authintication to Telegram with your telephone number and a code. Code will be sent to you by Telegram after you type in your telephone. After you pass the code you will not need to do it again unless you delete session files
+  Type `/start` to your bot to start bot and you will get all available commands.
+  Set the spam-list groups and spam message with `/add_groups` and `/set_message` commands respectively. 
+  Use `/send_all` to start sending. 
+  *!WARNING!* 
+  At the first time it will ask for a authintication to Telegram with your telephone number and a code. Code will be sent to you by Telegram after you type in your     telephone. After you pass the code you will not need to do it again unless you delete session files
 
   ## Contributing
 
