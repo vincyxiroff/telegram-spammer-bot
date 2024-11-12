@@ -1,17 +1,23 @@
-from aiogram import Bot, Dispatcher, executor, types
+from aiogram import Bot, Dispatcher, types
 import logging
-
+import sqlite3
 import nest_asyncio
 nest_asyncio.apply()
-
+import asyncio
 import aiogram
+import os
 from config import Config
 import db
 import send
+from aiogram.enums import ParseMode
+from aiogram.filters import Command, CommandStart
+from aiogram.types import Message
 
 logging.basicConfig(level=logging.INFO)
 config = Config()
 
+conn = sqlite3.connect(os.path.join('db', 'script.db'))
+cursor = conn.cursor()
 
 bot_help = """Справка по командам
 
@@ -61,9 +67,9 @@ bot_commands = {
 
 
 bot = Bot(token=config.BOT_TOKEN)
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
-@dp.message_handler(commands=['start'])
+@dp.message(CommandStart())
 async def start(message : types.Message):
 
     """Start command for bot. Greets user and shows available commands"""
@@ -73,14 +79,15 @@ async def start(message : types.Message):
     await message.answer(answer_message)
 
 
-@dp.message_handler(commands=['add_groups'])
-async def add_groups(message : types.Message):
-
+@dp.message(Command("add_groups"))
+async def add_groups(message: types.Message):
     """Command for adding groups to a spam-list"""
 
-    if message.get_args():
+    args = message.text.split(maxsplit=1)  # Divide il testo dopo il comando
+    if len(args) > 1:
+        links_to_add = args[1]  # Prende il resto del testo come argomenti
         try:
-            db.insert('links', message.get_args())
+            db.insert('links', links_to_add)
         except Exception as e:
             await message.answer("Не удалось записать группы\nОшибка: " + str(e))
             return
@@ -91,8 +98,7 @@ async def add_groups(message : types.Message):
     await message.answer("Группы были записаны")
     await show_groups(message)
 
-
-@dp.message_handler(commands=['show_groups'])
+@dp.message(Command("show_groups"))
 async def show_groups(message : types.Message):
 
     """Command for showing user current groups in a spam-list"""
@@ -109,25 +115,36 @@ async def show_groups(message : types.Message):
                               "Введите /add_groups, чтобы добавить их")
 
 
-@dp.message_handler(commands=['set_message'])
-async def set_message(message : types.Message):
-
-    """Command for set new spam-message"""
-
-    messages = db.getall('messages')
-    if messages:
+@dp.message(Command("set_message"))
+async def set_message(message: types.Message):
+    """Comando per impostare o aggiornare un messaggio per il bot"""
+    
+    # Estrai il messaggio completo dopo il comando
+    if " " in message.text:
+        message_to_set = message.text.split(" ", 1)[1]  # Prendi tutto dopo '/set_message'
+    else:
+        message_to_set = ""
+    
+    if message_to_set:
         try:
-            db.update('messages', message.get_args())
+            # Verifica se c'è già un messaggio nel database
+            cursor.execute("SELECT COUNT(*) FROM messages WHERE id = 1")
+            result = cursor.fetchone()
+
+            if result[0] > 0:  # Se il messaggio esiste già, fai un update
+                db.update('messages', message_to_set)
+                await message.answer("Il messaggio è stato aggiornato!")
+            else:  # Altrimenti inserisci il nuovo messaggio
+                db.insert('messages', message_to_set)
+                await message.answer("Il messaggio è stato salvato correttamente!")
         except Exception as e:
-            await message.answer("Не удалось записать сообщение\nОшибка: " + str(e))
+            await message.answer("Errore nel salvataggio o nell'aggiornamento del messaggio\nErrore: " + str(e))
             return
-        await message.answer("Сообщение было обновлено")
+    else:
+        await message.answer("Non hai scritto alcun messaggio!")
         return
-    db.insert('messages', message.get_args())
-    await message.answer("Сообщение было записано")
 
-
-@dp.message_handler(commands=['show_message'])
+@dp.message(Command("show_message"))
 async def show_message(message : types.Message):
 
     """Command for showing user current spam-message"""
@@ -142,7 +159,7 @@ async def show_message(message : types.Message):
         await message.answer("У вас пока нет сообщения для рассылки\n" \
                               "Введите /set_message, чтобы добавить его")
 
-@dp.message_handler(commands=['send_all'])
+@dp.message(Command("send_all"))
 async def sendall(message : types.Message):
 
     """Command to start spam with spam-list and spam-message specified earlier"""
@@ -163,7 +180,7 @@ async def sendall(message : types.Message):
     await message.answer('Рассылка успешно проведена')
 
 
-@dp.message_handler(commands=['delete_groups'])
+@dp.message(Command("delete_groups"))
 async def delete_groups(message : types.Message):
 
     """Command for deleting specified groups from a spam-list"""
@@ -182,7 +199,7 @@ async def delete_groups(message : types.Message):
     await message.answer('Группы были удалены\n')
     await show_groups(message)
     
-@dp.message_handler(commands=['help'])
+@dp.message(Command("help"))
 async def help(message : types.Message):
 
     """Command for showing user help message about availible commands"""
@@ -191,4 +208,7 @@ async def help(message : types.Message):
 
 
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+    async def main():
+        await dp.start_polling(bot, skip_updates=True)
+    
+    asyncio.run(main())

@@ -7,3 +7,4 @@ create table if not EXISTS messages(
     id integer primary key,
     message_text text
 );
+
